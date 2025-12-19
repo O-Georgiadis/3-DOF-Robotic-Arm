@@ -12,12 +12,52 @@ Servo servo3; //controlled by e/d
 
 int angle1 = 170;  // servo1 starting position
 int angle2 = 0;    // servo2 starting position
-int angle3 = 170;
+int angle3 = 170; // servo3 starting possition
 
 
 const int START1 = 170;
 const int START2 = 0;
 const int START3 = 170;
+
+const int GRIP_OPEN = 170;
+const int GRIP_CLOSED = 30;   
+const float GRAB_DISTANCE_MIN = 4.0;
+const float GRAB_DISTANCE_MAX = 8.0;
+
+bool objectGrabbed = false; 
+
+
+void close_gripper() {
+  for (int i = angle3; i >= GRIP_CLOSED; i--) {
+    servo3.write(i);
+    delay(10);
+  }
+  angle3 = GRIP_CLOSED;
+}
+
+void lift_grabbed_item() {
+  // Servo1
+  for (int i = angle1; i <= START1; i++) {
+    servo1.write(i);
+    delay(10);
+  }
+  for (int i = angle1; i >= START1; i--) {
+    servo1.write(i);
+    delay(10);
+  }
+  angle1 = START1;
+
+  // Servo2
+  for (int i = angle2; i <= START2; i++) {
+    servo2.write(i);
+    delay(10);
+  }
+  for (int i = angle2; i >= START2; i--) {
+    servo2.write(i);
+    delay(10);
+  }
+  angle2 = START2;
+}
 
 
 void setup() {
@@ -170,6 +210,8 @@ void loop() {
     Serial.print("Servo3: "); Serial.println(angle3);
   }
 
+
+
   //ultrasonic sensor
   long duration;
   float distance_cm;
@@ -185,7 +227,7 @@ void loop() {
   duration = pulseIn(ECHO_PIN, HIGH, 30000);
 
   if (duration == 0) {
-    // No echo received → Out of range
+    // No echo received -> Out of range
     digitalWrite(GREEN_LED, LOW);
     digitalWrite(RED_LED, HIGH);
 
@@ -194,15 +236,29 @@ void loop() {
     // Calculate distance in cm
     distance_cm = duration * 0.0343 / 2;
 
-    if (distance_cm >= 4.0 && distance_cm <= 8.0) {
-      // Object in range → Green ON, Red OFF
+
+    if (distance_cm >= GRAB_DISTANCE_MIN && distance_cm <= GRAB_DISTANCE_MAX) {
+      // Object in range 
       digitalWrite(GREEN_LED, HIGH);
       digitalWrite(RED_LED, LOW);
+
+      if (!objectGrabbed){
+        Serial.println("Object detected...Begins grabbing");
+
+        close_gripper();
+        delay(300);
+        lift_grabbed_item();
+        delay(300);
+
+        objectGrabbed = true;
+
+      }
       
     } else {
-      // Object out of range → Red ON, Green OFF
+      // Object out of range 
       digitalWrite(GREEN_LED, LOW);
       digitalWrite(RED_LED, HIGH);
+      objectGrabbed = false;
     }
   }
 
